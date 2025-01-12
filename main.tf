@@ -6,8 +6,8 @@ terraform {
     }
   }
   backend "gcs" {
-    bucket  = "apt-octagon-254417-terraform-state"
-    prefix  = "terraform/state-files"
+    bucket = "apt-octagon-254417-terraform-state"
+    prefix = "terraform/state-files"
   }
 }
 
@@ -78,7 +78,7 @@ resource "google_cloudfunctions2_function" "my_function" {
   location    = "europe-west8"
   description = "This is the function that will write to the Google Sheet"
   build_config {
-    runtime = "go123"
+    runtime     = "go123"
     entry_point = "HelloHTTP"
     source {
       storage_source {
