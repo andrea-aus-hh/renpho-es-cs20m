@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   terraform:
@@ -28,7 +29,6 @@ jobs:
       name: 'Authenticate to Google Cloud'
       uses: google-github-actions/auth@v2.1.7
       with:
-        create_credentials_file: 'true'
         project_id: 'apt-octagon-254417'
         workload_identity_provider: 'projects/527200776980/locations/global/workloadIdentityPools/github/providers/github-provider'
         service_account: 'github-actions@apt-octagon-254417.iam.gserviceaccount.com'
