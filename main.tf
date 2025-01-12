@@ -65,7 +65,7 @@ resource "google_storage_bucket" "function_code_storage_bucket" {
 data "archive_file" "local_archive_function" {
   type        = "zip"
   output_path = "/tmp/function-source.zip"
-  source_dir  = "."
+  source_dir  = "./sheet_updater_function"
 }
 resource "google_storage_bucket_object" "function_code" {
   name   = "function_code.zip"

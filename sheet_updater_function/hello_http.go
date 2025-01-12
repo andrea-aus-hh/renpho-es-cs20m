@@ -1,5 +1,4 @@
-// Package helloworld provides a set of Cloud Functions samples.
-package helloworld
+package sheet_updater_function
 
 import (
 	"encoding/json"
