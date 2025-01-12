@@ -16,6 +16,7 @@ func init() {
 
 // HelloHTTP is an HTTP Cloud Function with a request parameter.
 func HelloHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("Hello HTTP!\n")
 	ctx := context.Background()
 	srv, err := sheets.NewService(ctx)
 	if err != nil {

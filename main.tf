@@ -46,8 +46,8 @@ resource "google_service_account" "google_sheets_account" {
 }
 
 resource "google_cloud_run_service_iam_member" "member" {
-  location = google_cloudfunctions2_function.my_function.location
-  service  = google_cloudfunctions2_function.my_function.name
+  location = google_cloudfunctions2_function.google_sheet_function.location
+  service  = google_cloudfunctions2_function.google_sheet_function.name
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
@@ -68,15 +68,16 @@ data "archive_file" "local_archive_function" {
   source_dir  = "./sheet_updater_function"
 }
 resource "google_storage_bucket_object" "function_code" {
-  name   = "function_code.zip"
+  name   = "function_code.${data.archive_file.local_archive_function.output_md5}.zip"
   bucket = google_storage_bucket.function_code_storage_bucket.name
   source = data.archive_file.local_archive_function.output_path
 }
 
-resource "google_cloudfunctions2_function" "my_function" {
-  name        = "google-sheets-function"
+resource "google_cloudfunctions2_function" "google_sheet_function" {
+  name        = "weight-write-function"
   location    = "europe-west8"
-  description = "This is the function that will write to the Google Sheet"
+  description = "This is the function that will write to the Diary Google Sheet"
+  project     = var.project_id
   build_config {
     runtime     = "go123"
     entry_point = "HelloHTTP"
@@ -89,12 +90,11 @@ resource "google_cloudfunctions2_function" "my_function" {
   }
 
   service_config {
-
     service_account_email = google_service_account.google_sheets_account.email
   }
 }
 
 output "function_uri" {
-  value = google_cloudfunctions2_function.my_function.service_config[0].uri
+  value = google_cloudfunctions2_function.google_sheet_function.service_config[0].uri
 }
 
