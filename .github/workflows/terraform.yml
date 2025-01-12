@@ -25,6 +25,10 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    - name: Print OIDC Token
+      run: |
+        echo "OIDC Token: ${{ secrets.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}"
+
     - id: 'auth'
       name: 'Authenticate to Google Cloud'
       uses: google-github-actions/auth@v2.1.7
