@@ -1,12 +1,13 @@
 package sheet_updater_function
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"html"
+	"log"
 	"net/http"
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"google.golang.org/api/sheets/v4"
 )
 
 func init() {
@@ -15,16 +16,15 @@ func init() {
 
 // HelloHTTP is an HTTP Cloud Function with a request parameter.
 func HelloHTTP(w http.ResponseWriter, r *http.Request) {
-	var d struct {
-		Name string `json:"name"`
+	ctx := context.Background()
+	srv, err := sheets.NewService(ctx)
+	if err != nil {
+		log.Fatalf("Unable to retrieve Sheets client: %v", err)
 	}
-	if err := json.NewDecoder(r.Body).Decode(&d); err != nil {
-		fmt.Fprint(w, "Hello, World!")
-		return
+	spreadsheetId := "1WBAPDBnb01eJFBpBwmo_NDq2r9B44U0wyt7CZFxtus4"
+	spreadsheet, err := srv.Spreadsheets.Get(spreadsheetId).Context(ctx).Do()
+	if err != nil {
+		log.Fatalf("unable to retrieve spreadsheet: %v", err)
 	}
-	if d.Name == "" {
-		fmt.Fprint(w, "Hello, World!")
-		return
-	}
-	fmt.Fprintf(w, "Hello, %s!", html.EscapeString(d.Name))
+	fmt.Fprintf(w, "Spreadsheet Title: %s\n", spreadsheet.Properties.Title)
 }
