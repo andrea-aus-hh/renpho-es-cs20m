@@ -47,7 +47,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     issuer_uri = "https://token.actions.githubusercontent.com"
   }
 
-  attribute_condition = "attribute.repository == \"${local.github_repository_name}\" && attribute.ref == \"refs/heads/main\" && attribute.workflow == \"terraform.yml\""
+  attribute_condition = "attribute.repository == \"${local.github_repository_name}\" && attribute.ref == \"refs/heads/master\" && attribute.workflow == \"terraform.yml\""
 }
 
 resource "google_service_account_iam_member" "github_actions" {
