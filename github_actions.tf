@@ -56,6 +56,14 @@ resource "google_service_account_iam_member" "github_actions" {
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github_identity_pool.name}/attribute.repository/${local.github_repository_name}"
 }
 
+resource "google_storage_bucket_iam_member" "terraform_state_access" {
+  bucket = google_storage_bucket.terraform_state.name
+  role   = "roles/storage.objectAdmin"
+
+  member = "serviceAccount:${google_service_account.github_actions.email}"  # Replace with your service account email
+}
+
+
 output "service_account_github_actions_email" {
   description = "Service Account used by GitHub Actions"
   value       = google_service_account.github_actions.email
