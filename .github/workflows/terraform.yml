@@ -27,7 +27,11 @@ jobs:
 
     - name: Print OIDC Token
       run: |
-        echo "OIDC Token: ${{ secrets.ACTIONS_ID_TOKEN_REQUEST_TOKEN }}"
+        OIDC_TOKEN=$(curl -s --header "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://token.actions.githubusercontent.com/.well-known/openid-configuration | jq -r '.id_token')
+
+        # Print the token (before authentication attempt)
+        echo "OIDC Token: $OIDC_TOKEN"
 
     - id: 'auth'
       name: 'Authenticate to Google Cloud'
