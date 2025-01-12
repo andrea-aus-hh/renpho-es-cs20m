@@ -30,7 +30,7 @@ resource "google_iam_workload_identity_pool" "github" {
   description               = "Identity pool for GitHub Actions"
 }
 
-resource "google_iam_workload_identity_pool_provider" "github" {
+resource "google_iam_workload_identity_pool_provider" "github_pool_provider" {
   provider                           = google-beta
   project                            = var.project_id
   workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
@@ -63,5 +63,5 @@ output "service_account_github_actions_email" {
 
 output "google_iam_workload_identity_pool_provider_github_name" {
   description = "Workload Identity Pood Provider ID"
-  value       = google_iam_workload_identity_pool_provider.github.name
+  value       = google_iam_workload_identity_pool_provider.github_pool_provider.name
 }
