@@ -37,19 +37,14 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   workload_identity_pool_provider_id = "github-provider"
   display_name                       = "github actions provider"
   description                        = "OIDC identity pool provider for execute GitHub Actions"
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.repository" = "assertion.repository"
+    "attribute.ref"        = "assertion.ref"
+    "attribute.workflow"   = "assertion.workflow"
+  }
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"
-
-    allowed_audiences = [
-      google_iam_workload_identity_pool_provider.github.name
-    ]
-
-    attribute_mapping = {
-      "google.subject"       = "assertion.sub"
-      "attribute.repository" = "assertion.repository"
-      "attribute.ref"        = "assertion.ref"
-      "attribute.workflow"   = "assertion.workflow"
-    }
   }
 
   attribute_condition = "attribute.repository == \"${local.github_repository_name}\" && attribute.ref == \"refs/heads/main\" && attribute.workflow == \"terraform.yml\""
