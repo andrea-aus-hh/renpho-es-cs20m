@@ -59,8 +59,7 @@ resource "google_service_account_iam_member" "github_actions" {
 resource "google_storage_bucket_iam_member" "terraform_state_access" {
   bucket = google_storage_bucket.terraform_state.name
   role   = "roles/storage.objectAdmin"
-
-  member = "serviceAccount:${google_service_account.github_actions.email}"  # Replace with your service account email
+  member = "serviceAccount:${google_service_account.github_actions.email}"
 }
 
 
