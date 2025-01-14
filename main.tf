@@ -49,7 +49,14 @@ resource "google_cloud_run_service_iam_member" "member" {
   location = google_cloudfunctions2_function.google_sheet_function.location
   service  = google_cloudfunctions2_function.google_sheet_function.name
   role     = "roles/run.invoker"
-  member   = "allUsers"
+  member   = "allAuthenticatedUsers"
+}
+
+resource "google_cloud_run_service_iam_member" "me" {
+  location = google_cloudfunctions2_function.google_sheet_function.location
+  service  = google_cloudfunctions2_function.google_sheet_function.name
+  role     = "roles/run.invoker"
+  member   = "user:xxx@gmail.com"
 }
 
 resource "random_id" "default" {
@@ -80,7 +87,7 @@ resource "google_cloudfunctions2_function" "google_sheet_function" {
   project     = var.project_id
   build_config {
     runtime     = "go123"
-    entry_point = "HelloHTTP"
+    entry_point = "WeightWriter"
     source {
       storage_source {
         bucket = google_storage_bucket.function_code_storage_bucket.name
