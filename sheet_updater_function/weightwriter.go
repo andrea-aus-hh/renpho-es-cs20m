@@ -2,94 +2,101 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"google.golang.org/api/sheets/v4"
 )
 
+var handler *WeightWriterHandler
+
+type WeightWriterHandler struct {
+	WeightService WeightService
+}
+
 func init() {
+	ctx := context.Background()
+	sheetsService, err := sheets.NewService(ctx)
+	if err != nil {
+		log.Fatalf("Unable to create Sheets client: %v", err)
+	}
+
+	handler = &WeightWriterHandler{
+		WeightService: &GoogleSheetService{service: sheetsService},
+	}
 	functions.HTTP("WeightWriter", WeightWriter)
 }
 
-// WeightWriter is an HTTP Cloud Function with a request parameter.
-func WeightWriter(w http.ResponseWriter, _ *http.Request) {
-	ctx := context.Background()
-	srv, err := sheets.NewService(ctx)
-	if err != nil {
-		log.Fatalf("Unable to retrieve Sheets client: %v", err)
-	}
-	spreadsheetId := "1WBAPDBnb01eJFBpBwmo_NDq2r9B44U0wyt7CZFxtus4"
-	spreadsheet, err := srv.Spreadsheets.Get(spreadsheetId).Context(ctx).Do()
-	if err != nil {
-		log.Fatalf("unable to retrieve spreadsheet: %v", err)
-	}
-	dateToFind := time.Now().AddDate(0, 0, 1)
-
-	candidateSheet := findCorrectSheet(spreadsheet, srv, spreadsheetId, dateToFind)
-
-	log.Printf("Candidate sheet is called '%s'", candidateSheet.Properties.Title)
-
-	readRange := fmt.Sprintf("%s!B:E", candidateSheet.Properties.Title)
-	resp, err := srv.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
-	if err != nil {
-		log.Printf("Unable to read data from sheet '%s': %v", candidateSheet.Properties.Title, err)
-	}
-
-	for i, row := range resp.Values {
-		dateStr, ok := row[0].(string)
-		if !ok {
-			continue
-		}
-
-		dateParsed, err := time.Parse("02/01/2006", dateStr)
-		if err != nil {
-			continue
-		}
-
-		if datesAreEqual(dateParsed, dateToFind) {
-			writeRange := candidateSheet.Properties.Title + "!E" + string(rune(i+1))
-			valueRange := &sheets.ValueRange{
-				Values: [][]interface{}{{"3,141592"}}, // Value to write
-			}
-			fmt.Fprintf(w, "Updating sheet '%s' at location '%s'\n", candidateSheet.Properties.Title, writeRange)
-			_, err := srv.Spreadsheets.Values.Update(spreadsheetId, writeRange, valueRange).Do()
-			if err != nil {
-				log.Printf("Unable to update sheet '%s': %v", candidateSheet.Properties.Title, err)
-				return
-			} else {
-				fmt.Fprintf(w, "Updated sheet '%s' at location '%s'\n", candidateSheet.Properties.Title, writeRange)
-			}
-			return
-		}
-	}
+func WeightWriter(w http.ResponseWriter, r *http.Request) {
+	handler.WeightWriter(w, r)
 }
 
-func findCorrectSheet(spreadsheet *sheets.Spreadsheet, srv *sheets.Service, spreadsheetId string, dateToFind time.Time) *sheets.Sheet {
-	candidateSheet := spreadsheet.Sheets[0]
-	for _, sheet := range spreadsheet.Sheets {
-		if !strings.HasPrefix(sheet.Properties.Title, "Diario") {
-			break
-		}
-		readRange := fmt.Sprintf("%s!B4", candidateSheet.Properties.Title)
-		resp, err := srv.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
-		if err != nil {
-			log.Fatalf("Unable to retrieve data from sheet: %v", err)
-		}
-		firstDate, err := time.Parse("02/01/2006", resp.Values[0][0].(string))
-		if err != nil {
-			log.Fatalf("Unable to parse data from sheet: %v", err)
-		}
-		if firstDate.After(dateToFind) {
-			break
-		}
-		candidateSheet = sheet
+type RequestBody struct {
+	Date   time.Time `json:"date"`
+	Weight float32   `json:"weight"`
+}
+
+func (r *RequestBody) UnmarshalJSON(data []byte) error {
+	type Alias RequestBody
+	aux := &struct {
+		Date string `json:"date"`
+		*Alias
+	}{
+		Alias: (*Alias)(r),
 	}
-	return candidateSheet
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	parsedDate, err := time.Parse("2006-01-02", aux.Date)
+	if err != nil {
+		return fmt.Errorf("invalid date format, expected YYYY-MM-DD")
+	}
+	r.Date = parsedDate
+	return nil
+}
+
+func (rb RequestBody) validate() error {
+	if rb.Weight < 60 {
+		return errors.New("weight too low")
+	}
+	if rb.Weight > 120 {
+		return errors.New("weight too high")
+	}
+	if rb.Date.Before(time.Date(2021, 3, 21, 0, 0, 0, 0, time.UTC)) {
+		return errors.New("date is too much in the past")
+	}
+	return nil
+}
+
+// WeightWriter is an HTTP Cloud Function with a request parameter.
+func (h *WeightWriterHandler) WeightWriter(w http.ResponseWriter, r *http.Request) {
+	spreadsheetId := "1WBAPDBnb01eJFBpBwmo_NDq2r9B44U0wyt7CZFxtus4"
+
+	var body RequestBody
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&body)
+	if err != nil {
+		http.Error(w, "Failed to parse JSON", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+	err = body.validate()
+	if err != nil {
+		http.Error(w, "Failed to validate JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("body: %v", body)
+
+	err = h.WeightService.Update(spreadsheetId, body.Date, body.Weight)
+	if err != nil {
+		fmt.Fprintf(w, "Unable to update Weight: %v", err)
+	}
 }
 
 func datesAreEqual(date1, date2 time.Time) bool {
