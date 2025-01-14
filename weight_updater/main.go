@@ -1,7 +1,7 @@
 package main
 
 import (
-	"andrea-aus-hh.de/weightlambda/weight_updater_function"
+	"andrea-aus-hh.de/weightupdater/weight_updater_function"
 	"log"
 	"net/http"
 )

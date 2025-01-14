@@ -1,4 +1,4 @@
-module andrea-aus-hh.de/weightlambda
+module andrea-aus-hh.de/weightupdater
 
 go 1.23.4
 
