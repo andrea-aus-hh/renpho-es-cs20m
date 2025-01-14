@@ -1,4 +1,4 @@
-package weight_updater_function
+package weightupdater
 
 import (
 	"errors"
