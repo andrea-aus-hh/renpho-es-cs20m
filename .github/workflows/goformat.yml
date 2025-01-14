@@ -2,8 +2,7 @@ name: Check Go Code Format
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "master" ]
   pull_request:
 
 jobs:
@@ -17,7 +16,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.x" # Use the desired Go version
+          go-version: "1.23"
 
       - name: Run gofmt
         run: |
