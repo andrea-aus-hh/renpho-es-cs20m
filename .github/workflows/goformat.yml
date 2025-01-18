@@ -1,4 +1,4 @@
-name: Check Go Code Format
+name: Weight receiver, go format, build, test
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  go-format-check:
+  go-check-build:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,6 +19,7 @@ jobs:
           go-version: "1.23"
 
       - name: Run gofmt
+        working-directory: weightreceiver
         run: |
           unformatted=$(gofmt -l .)
           if [ -n "$unformatted" ]; then
@@ -28,4 +29,30 @@ jobs:
             exit 1
           else
             echo "All files are properly formatted."
+          fi
+
+      - name: Compile Go Project
+        working-directory: weightreceiver
+        run: |
+          go build -v ./...
+
+      - name: Verify Build
+        working-directory: weightreceiver
+        run: |
+          if [ ! -f "weightreceiver" ]; then
+            echo "Build failed: executable not found."
+            exit 1
+          else
+            echo "Build successful."
+          fi
+
+      - name: Run Tests
+        working-directory: weightreceiver
+        run: |
+          go test -v ./...
+          if [ $? -ne 0 ]; then
+            echo "Tests failed."
+            exit 1
+          else
+            echo "All tests passed successfully."
           fi
