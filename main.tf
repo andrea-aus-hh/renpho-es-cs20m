@@ -55,7 +55,7 @@ resource "google_cloud_run_service_iam_member" "member" {
 resource "google_secret_manager_secret" "user_email" {
   secret_id = "user_email_secret"
   replication {
-    auto{}
+    auto {}
   }
 }
 
