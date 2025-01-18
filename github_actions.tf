@@ -2,6 +2,7 @@ locals {
   roles = [
     "roles/resourcemanager.projectIamAdmin",
     "roles/editor",
+    "roles/secretmanager.secretAccessor"
   ]
   github_repository_name = "andrea-aus-hh/renpho-es-cs20m"
 }
@@ -69,6 +70,6 @@ output "service_account_github_actions_email" {
 }
 
 output "google_iam_workload_identity_pool_provider_github_name" {
-  description = "Workload Identity Pood Provider ID"
+  description = "Workload Identity Pool Provider ID"
   value       = google_iam_workload_identity_pool_provider.github_pool_provider.name
 }
