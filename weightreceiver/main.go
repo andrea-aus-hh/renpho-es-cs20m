@@ -61,24 +61,28 @@ func scanWeights(incomingWeights chan<- float64) {
 	log.Println("Scan stopped!")
 }
 
+func interruptOnOsSignals(osSignals <-chan os.Signal) {
+	<-osSignals
+	adapter.StopScan()
+	fmt.Println("Scan interrupted, exiting...")
+	os.Exit(0)
+}
+
+func interruptOnFinalWeight(finalWeightDetected <-chan float64) {
+	finalWeight := <-finalWeightDetected
+	adapter.StopScan()
+	fmt.Printf("Stable weight detected: %.2fKg\n", finalWeight)
+	os.Exit(0)
+}
+
 func main() {
-	signalChan := make(chan os.Signal, 1)
+	osSignals := make(chan os.Signal, 1)
 	finalWeightDetected := make(chan float64, 1)
 	incomingWeights := make(chan float64, 1)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-signalChan
-		adapter.StopScan()
-		fmt.Println("Scan interrupted, exiting...")
-		os.Exit(0)
-	}()
+	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
 
+	go interruptOnOsSignals(osSignals)
 	go scanWeights(incomingWeights)
 	go processWeights(incomingWeights, finalWeightDetected)
-
-	select {
-	case stableWeight := <-finalWeightDetected:
-		adapter.StopScan()
-		fmt.Printf("Stable weight detected: %.2fKg\n", stableWeight)
-	}
+	go interruptOnFinalWeight(finalWeightDetected)
 }
