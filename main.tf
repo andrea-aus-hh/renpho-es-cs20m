@@ -52,11 +52,22 @@ resource "google_cloud_run_service_iam_member" "member" {
   member   = "allAuthenticatedUsers"
 }
 
+resource "google_secret_manager_secret" "user_email" {
+  secret_id = "user_email_secret"
+  replication {
+    auto{}
+  }
+}
+
+data "google_secret_manager_secret_version" "user_email" {
+  secret = google_secret_manager_secret.user_email.id
+}
+
 resource "google_cloud_run_service_iam_member" "me" {
   location = google_cloudfunctions2_function.google_sheet_function.location
   service  = google_cloudfunctions2_function.google_sheet_function.name
   role     = "roles/run.invoker"
-  member   = "user:xxx@gmail.com"
+  member   = "user:${data.google_secret_manager_secret_version.user_email.secret_data}"
 }
 
 resource "random_id" "default" {
