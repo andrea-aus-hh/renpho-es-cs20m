@@ -5,7 +5,7 @@ on:
     branches: ['master']
   paths:
     - 'weightreceiver/**'
-    - 'workflows/docker.yml'
+    - '.github/workflows/docker.yml'
 
 env:
   REGISTRY: ghcr.io
