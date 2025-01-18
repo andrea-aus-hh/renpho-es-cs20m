@@ -3,9 +3,9 @@ name: Create and publish the Weight receiver image
 on:
   push:
     branches: ['master']
-  paths:
-    - 'weightreceiver/**'
-    - '.github/workflows/docker.yml'
+    paths:
+      - 'weightreceiver/**'
+      - '.github/workflows/docker.yml'
 
 env:
   REGISTRY: ghcr.io
