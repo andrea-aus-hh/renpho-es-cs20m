@@ -30,6 +30,7 @@ func processWeights(incomingWeights <-chan float64, finalWeightDetected chan<- f
 	var lastStableTime time.Time
 	isStable := false
 	for rawWeight := range incomingWeights {
+		log.Printf("Received weight %.2f", rawWeight)
 		if currentWeight != -1 && rawWeight == currentWeight {
 			log.Printf("Weight has been stabled on %.2f for %.0f seconds", rawWeight, time.Since(lastStableTime).Seconds())
 			if time.Since(lastStableTime) >= stabilizationDuration && !isStable {
@@ -42,6 +43,8 @@ func processWeights(incomingWeights <-chan float64, finalWeightDetected chan<- f
 			isStable = false
 		}
 	}
+	log.Println("Channel closed.")
+	close(finalWeightDetected)
 }
 
 func scanWeights(incomingWeights chan<- float64) {
@@ -68,13 +71,6 @@ func interruptOnOsSignals(osSignals <-chan os.Signal) {
 	os.Exit(0)
 }
 
-func interruptOnFinalWeight(finalWeightDetected <-chan float64) {
-	finalWeight := <-finalWeightDetected
-	adapter.StopScan()
-	fmt.Printf("Stable weight detected: %.2fKg\n", finalWeight)
-	os.Exit(0)
-}
-
 func main() {
 	osSignals := make(chan os.Signal, 1)
 	finalWeightDetected := make(chan float64, 1)
@@ -84,5 +80,15 @@ func main() {
 	go interruptOnOsSignals(osSignals)
 	go scanWeights(incomingWeights)
 	go processWeights(incomingWeights, finalWeightDetected)
-	go interruptOnFinalWeight(finalWeightDetected)
+
+	select {
+	case finalWeight, ok := <-finalWeightDetected:
+		adapter.StopScan()
+		if ok {
+			fmt.Printf("Stable weight detected: %.2fKg\n", finalWeight)
+		} else {
+			fmt.Printf("Stable weight not detected")
+		}
+		os.Exit(0)
+	}
 }
