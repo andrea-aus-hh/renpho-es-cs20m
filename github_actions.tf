@@ -47,7 +47,7 @@ resource "google_iam_workload_identity_pool_provider" "github_pool_provider" {
     issuer_uri = "https://token.actions.githubusercontent.com"
   }
 
-  attribute_condition = "attribute.repository == \"${local.github_repository_name}\" && attribute.ref == \"refs/heads/master\" && attribute.workflow == \"Terraform\""
+  attribute_condition = "attribute.repository == \"${local.github_repository_name}\" && attribute.ref == \"refs/heads/master\" && attribute.workflow == \"Deploy the weight updater GCP function\""
 }
 
 resource "google_service_account_iam_member" "github_actions" {
