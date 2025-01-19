@@ -57,6 +57,7 @@ func (r *RequestBody) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("invalid date format, expected YYYY-MM-DD")
 	}
 	r.Date = parsedDate
+	r.Weight = aux.Weight
 	return nil
 }
 
