@@ -81,7 +81,7 @@ func (h *WeightWriterHandler) WeightWriter(w http.ResponseWriter, r *http.Reques
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&body)
 	if err != nil {
-		http.Error(w, "Failed to parse JSON", http.StatusBadRequest)
+		http.Error(w, "Failed to parse JSON: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()

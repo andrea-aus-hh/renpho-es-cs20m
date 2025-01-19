@@ -43,8 +43,6 @@ func processWeights(incomingWeights <-chan float64, finalWeightDetected chan<- f
 			isStable = false
 		}
 	}
-	log.Println("Channel closed.")
-	close(finalWeightDetected)
 }
 
 func scanWeights(incomingWeights chan<- float64) {
@@ -60,7 +58,6 @@ func scanWeights(incomingWeights chan<- float64) {
 			incomingWeights <- parseWeightData(result.ManufacturerData()[0].Data)
 		}
 	})
-	close(incomingWeights)
 	log.Println("Scan stopped!")
 }
 
@@ -89,6 +86,6 @@ func main() {
 		} else {
 			fmt.Printf("Stable weight not detected")
 		}
-		os.Exit(0)
+
 	}
 }
