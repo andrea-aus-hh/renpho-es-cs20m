@@ -1,12 +1,16 @@
 FROM golang:alpine AS builder
-
-ARG TARGETOS=linux
-ARG TARGETARCH=amd64
-
+ENV CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
 WORKDIR /build
-COPY ./ ./
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o weightreceiver .
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o weightreceiver .
 
-FROM scratch
-COPY --from=builder /build/weightreceiver /build/weightreceiver
-CMD ["/build/weightreceiver"]
+FROM alpine:latest
+WORKDIR /
+COPY --from=builder /build/weightreceiver .
+RUN chmod +x ./weightreceiver
+CMD ["./weightreceiver"]
