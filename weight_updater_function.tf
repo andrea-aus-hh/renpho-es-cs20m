@@ -4,8 +4,8 @@ resource "google_service_account" "google_sheets_account" {
 }
 
 resource "google_cloud_run_service_iam_member" "member" {
-  location = google_cloudfunctions2_function.google_sheet_function.location
-  service  = google_cloudfunctions2_function.google_sheet_function.name
+  location = google_cloudfunctions2_function.weight_updater_function.location
+  service  = google_cloudfunctions2_function.weight_updater_function.name
   role     = "roles/run.invoker"
   member   = "allAuthenticatedUsers"
 }
@@ -31,14 +31,14 @@ resource "google_storage_bucket_object" "function_code" {
   source = data.archive_file.local_archive_function.output_path
 }
 
-resource "google_cloudfunctions2_function" "google_sheet_function" {
-  name        = "weight-write-function"
+resource "google_cloudfunctions2_function" "weight_updater_function" {
+  name        = "weight-updater-function"
   location    = "europe-west8"
-  description = "This is the function that will write to the Diary Google Sheet"
+  description = "This is the function that will write the weight to the Diary Google Sheet"
   project     = var.project_id
   build_config {
     runtime     = "go123"
-    entry_point = "WeightWriter"
+    entry_point = "WeightUpdater"
     source {
       storage_source {
         bucket = google_storage_bucket.function_code_storage_bucket.name
@@ -53,5 +53,5 @@ resource "google_cloudfunctions2_function" "google_sheet_function" {
 }
 
 output "function_uri" {
-  value = google_cloudfunctions2_function.google_sheet_function.service_config[0].uri
+  value = google_cloudfunctions2_function.weight_updater_function.service_config[0].uri
 }

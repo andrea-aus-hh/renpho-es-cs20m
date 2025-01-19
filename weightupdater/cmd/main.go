@@ -7,6 +7,6 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/", weightupdater.WeightWriter)
+	http.HandleFunc("/", weightupdater.WeightUpdater)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

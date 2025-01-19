@@ -13,9 +13,9 @@ import (
 	"google.golang.org/api/sheets/v4"
 )
 
-var handler *WeightWriterHandler
+var handler *WeightUpdaterHandler
 
-type WeightWriterHandler struct {
+type WeightUpdaterHandler struct {
 	WeightService WeightService
 }
 
@@ -26,14 +26,14 @@ func init() {
 		log.Fatalf("Unable to create Sheets client: %v", err)
 	}
 
-	handler = &WeightWriterHandler{
+	handler = &WeightUpdaterHandler{
 		WeightService: &GoogleSheetService{service: sheetsService},
 	}
-	functions.HTTP("WeightWriter", WeightWriter)
+	functions.HTTP("WeightUpdater", WeightUpdater)
 }
 
-func WeightWriter(w http.ResponseWriter, r *http.Request) {
-	handler.WeightWriter(w, r)
+func WeightUpdater(w http.ResponseWriter, r *http.Request) {
+	handler.WeightUpdater(w, r)
 }
 
 type RequestBody struct {
@@ -74,8 +74,8 @@ func (rb RequestBody) validate() error {
 	return nil
 }
 
-// WeightWriter is an HTTP Cloud Function with a request parameter.
-func (h *WeightWriterHandler) WeightWriter(w http.ResponseWriter, r *http.Request) {
+// WeightUpdater is an HTTP Cloud Function with a request parameter.
+func (h *WeightUpdaterHandler) WeightUpdater(w http.ResponseWriter, r *http.Request) {
 	spreadsheetId := "1WBAPDBnb01eJFBpBwmo_NDq2r9B44U0wyt7CZFxtus4"
 
 	var body RequestBody
