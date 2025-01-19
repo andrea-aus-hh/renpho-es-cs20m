@@ -10,7 +10,7 @@ func TestProducerConsumer(t *testing.T) {
 	var wg sync.WaitGroup
 	sharedResource := 0
 
-	runTest := func(t *testing.T, incomingWeights <-chan float64, finalWeightDetected chan float64, weightProvider func(), expectedSuccess bool, expectedWeight float64) {
+	runTest := func(t *testing.T, incomingWeights <-chan float32, finalWeightDetected chan float32, weightProvider func(), expectedSuccess bool, expectedWeight float32) {
 		go processWeights(incomingWeights, finalWeightDetected)
 		wg.Add(1)
 		go func() {
@@ -30,10 +30,10 @@ func TestProducerConsumer(t *testing.T) {
 
 	t.Run(`When passing five different weights without enough time,
 					then no result is returned`, func(t *testing.T) {
-		incomingWeights := make(chan float64, 1)
-		finalWeightDetected := make(chan float64, 1)
+		incomingWeights := make(chan float32, 1)
+		finalWeightDetected := make(chan float32, 1)
 		runTest(t, incomingWeights, finalWeightDetected, func() {
-			for _, data := range []float64{1., 2., 3., 4., 5.} {
+			for _, data := range []float32{1., 2., 3., 4., 5.} {
 				incomingWeights <- data
 			}
 			close(incomingWeights)
@@ -42,10 +42,10 @@ func TestProducerConsumer(t *testing.T) {
 
 	t.Run(`When passing five same weights without enough time,
 					then no result is returned`, func(t *testing.T) {
-		incomingWeights := make(chan float64, 1)
-		finalWeightDetected := make(chan float64, 1)
+		incomingWeights := make(chan float32, 1)
+		finalWeightDetected := make(chan float32, 1)
 		runTest(t, incomingWeights, finalWeightDetected, func() {
-			for _, data := range []float64{10., 10., 10., 10., 10., 10., 10.} {
+			for _, data := range []float32{10., 10., 10., 10., 10., 10., 10.} {
 				incomingWeights <- data
 			}
 			close(incomingWeights)
@@ -54,10 +54,10 @@ func TestProducerConsumer(t *testing.T) {
 
 	t.Run(`When passing a different weight every two seconds,
 					then no result is returned`, func(t *testing.T) {
-		incomingWeights := make(chan float64, 1)
-		finalWeightDetected := make(chan float64, 1)
+		incomingWeights := make(chan float32, 1)
+		finalWeightDetected := make(chan float32, 1)
 		runTest(t, incomingWeights, finalWeightDetected, func() {
-			for _, data := range []float64{10., 20., 30., 40.} {
+			for _, data := range []float32{10., 20., 30., 40.} {
 				incomingWeights <- data
 				time.Sleep(2 * time.Second)
 			}
@@ -68,10 +68,10 @@ func TestProducerConsumer(t *testing.T) {
 	t.Run(`When passing a different weight every two seconds,
 						and then the same weight every two seconds for two time
 					then that weight is returned`, func(t *testing.T) {
-		incomingWeights := make(chan float64, 1)
-		finalWeightDetected := make(chan float64, 1)
+		incomingWeights := make(chan float32, 1)
+		finalWeightDetected := make(chan float32, 1)
 		runTest(t, incomingWeights, finalWeightDetected, func() {
-			for _, data := range []float64{10., 20., 30., 40., 50., 50., 50.} {
+			for _, data := range []float32{10., 20., 30., 40., 50., 50., 50.} {
 				incomingWeights <- data
 				time.Sleep(2 * time.Second)
 			}

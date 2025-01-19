@@ -2,9 +2,13 @@ module weightreceiver
 
 go 1.23.4
 
-require tinygo.org/x/bluetooth v0.10.0
+require (
+	golang.org/x/oauth2 v0.25.0
+	tinygo.org/x/bluetooth v0.10.0
+)
 
 require (
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/saltosystems/winrt-go v0.0.0-20240509164145-4f7860a3bd2b // indirect

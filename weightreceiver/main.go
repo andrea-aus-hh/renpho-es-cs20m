@@ -1,8 +1,14 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -12,21 +18,54 @@ import (
 	"tinygo.org/x/bluetooth"
 )
 
+type WeightReceiver struct {
+	httpClient       *http.Client
+	weightUpdaterUrl string
+	btAdapter        *bluetooth.Adapter
+}
+
 const targetMACAddress = "ED:67:39:0A:C5:C0"
 
-var adapter = bluetooth.DefaultAdapter
 var stabilizationDuration = 3 * time.Second
 
-func parseWeightData(rawData []byte) float64 {
+func NewWeightReceiver() (*WeightReceiver, error) {
+	keyFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	if keyFile == "" {
+		return nil, fmt.Errorf("GOOGLE_APPLICATION_CREDENTIALS not set")
+	}
+
+	creds, err := os.ReadFile(keyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := google.JWTConfigFromJSON(creds, "https://www.googleapis.com/auth/cloud-platform")
+	if err != nil {
+		return nil, err
+	}
+
+	url := os.Getenv("WEIGHTUPDATER_URL")
+	if url == "" {
+		return nil, fmt.Errorf("WEIGHTUPDATER_URL not set")
+	}
+
+	return &WeightReceiver{
+		httpClient:       oauth2.NewClient(context.Background(), config.TokenSource(context.Background())),
+		weightUpdaterUrl: url,
+		btAdapter:        bluetooth.DefaultAdapter,
+	}, nil
+}
+
+func parseWeightData(rawData []byte) float32 {
 	if len(rawData) < 19 {
 		return -1
 	}
 	weightBytes := rawData[17:19]
-	return float64(int(weightBytes[1])<<8|int(weightBytes[0])) / 100.0
+	return float32(int(weightBytes[1])<<8|int(weightBytes[0])) / 100.0
 }
 
-func processWeights(incomingWeights <-chan float64, finalWeightDetected chan<- float64) {
-	var currentWeight float64 = -1
+func processWeights(incomingWeights <-chan float32, finalWeightDetected chan<- float32) {
+	var currentWeight float32 = -1
 	var lastStableTime time.Time
 	isStable := false
 	for rawWeight := range incomingWeights {
@@ -47,14 +86,14 @@ func processWeights(incomingWeights <-chan float64, finalWeightDetected chan<- f
 	close(finalWeightDetected)
 }
 
-func scanWeights(incomingWeights chan<- float64) {
-	if adapter.Enable() != nil {
-		fmt.Println("Failed to enable Bluetooth adapter")
+func (wr *WeightReceiver) scanWeights(incomingWeights chan<- float32) {
+	if wr.btAdapter.Enable() != nil {
+		fmt.Println("Failed to enable Bluetooth btAdapter")
 		close(incomingWeights)
 		return
 	}
 	log.Println("Scanning...")
-	adapter.Scan(func(adapter *bluetooth.Adapter, result bluetooth.ScanResult) {
+	wr.btAdapter.Scan(func(adapter *bluetooth.Adapter, result bluetooth.ScanResult) {
 		address := strings.ToUpper(result.Address.String())
 		if address == targetMACAddress {
 			incomingWeights <- parseWeightData(result.ManufacturerData()[0].Data)
@@ -64,26 +103,55 @@ func scanWeights(incomingWeights chan<- float64) {
 	log.Println("Scan stopped!")
 }
 
-func interruptOnOsSignals(osSignals <-chan os.Signal) {
+func (wr *WeightReceiver) interruptOnOsSignals(osSignals <-chan os.Signal) {
 	<-osSignals
-	adapter.StopScan()
+	wr.btAdapter.StopScan()
 	fmt.Println("Scan interrupted, exiting...")
 	os.Exit(0)
 }
 
+type RequestBody struct {
+	Date   time.Time `json:"date"`
+	Weight float32   `json:"weight"`
+}
+
+func (wr *WeightReceiver) sendWeight(detectedWeight float32) {
+	body := RequestBody{Weight: detectedWeight, Date: time.Now()}
+	jsonData, err := json.Marshal(body)
+
+	req, err := http.NewRequest("GET", wr.weightUpdaterUrl, bytes.NewBuffer(jsonData))
+	if err != nil {
+		panic(err)
+	}
+
+	resp, err := wr.httpClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	fmt.Printf("Response: %s\n", resp.Status)
+}
+
 func main() {
 	osSignals := make(chan os.Signal, 1)
-	finalWeightDetected := make(chan float64, 1)
-	incomingWeights := make(chan float64, 1)
+	finalWeightDetected := make(chan float32, 1)
+	incomingWeights := make(chan float32, 1)
 	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
 
-	go interruptOnOsSignals(osSignals)
-	go scanWeights(incomingWeights)
+	wr, err := NewWeightReceiver()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go wr.interruptOnOsSignals(osSignals)
+	go wr.scanWeights(incomingWeights)
 	go processWeights(incomingWeights, finalWeightDetected)
 
 	select {
 	case finalWeight, ok := <-finalWeightDetected:
-		adapter.StopScan()
+		wr.sendWeight(finalWeight)
+		wr.btAdapter.StopScan()
 		if ok {
 			fmt.Printf("Stable weight detected: %.2fKg\n", finalWeight)
 		} else {
