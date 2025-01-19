@@ -30,7 +30,7 @@ func (g *GoogleSheetService) Update(spreadsheetId string, date time.Time, weight
 	valueRange := &sheets.ValueRange{
 		Values: [][]interface{}{{formatFloat(weight)}},
 	}
-	_, err = g.service.Spreadsheets.Values.Update(spreadsheetId, writeRange, valueRange).Do()
+	_, err = g.service.Spreadsheets.Values.Update(spreadsheetId, writeRange, valueRange).ValueInputOption("USER_ENTERED").Do()
 	if err != nil {
 		log.Printf("Unable to update at range '%s': %v", writeRange, err)
 		return err
