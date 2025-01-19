@@ -116,10 +116,12 @@ type RequestBody struct {
 }
 
 func (wr *WeightReceiver) sendWeight(detectedWeight float32) {
+	log.Printf("Sending weight %.2f to %s", detectedWeight, wr.weightUpdaterUrl)
 	body := RequestBody{Weight: detectedWeight, Date: time.Now()}
 	jsonData, err := json.Marshal(body)
+	log.Printf("JSON: %s", string(jsonData))
 
-	req, err := http.NewRequest("GET", wr.weightUpdaterUrl, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", wr.weightUpdaterUrl, bytes.NewBuffer(jsonData))
 	if err != nil {
 		panic(err)
 	}

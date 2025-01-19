@@ -3,8 +3,18 @@ resource "google_service_account" "pi_invoker" {
   display_name = "Raspberry Pi Cloud Function Invoker"
 }
 
-resource "google_project_iam_binding" "pi_invoker_binding" {
-  project = var.project_id
-  role    = "roles/cloudfunctions.invoker"
-  members = ["serviceAccount:${google_service_account.pi_invoker.email}"]
+resource "google_cloudfunctions2_function_iam_member" "invoker" {
+  project        = google_cloudfunctions2_function.weight_updater_function.project
+  location       = google_cloudfunctions2_function.weight_updater_function.location
+  cloud_function = google_cloudfunctions2_function.weight_updater_function.name
+  role           = "roles/cloudfunctions.invoker"
+  member         = "serviceAccount:${google_service_account.pi_invoker.email}"
+}
+
+resource "google_cloudfunctions2_function_iam_member" "run_invoker" {
+  project        = google_cloudfunctions2_function.weight_updater_function.project
+  location       = google_cloudfunctions2_function.weight_updater_function.location
+  cloud_function = google_cloudfunctions2_function.weight_updater_function.name
+  role           = "roles/run.invoker"
+  member         = "serviceAccount:${google_service_account.pi_invoker.email}"
 }
