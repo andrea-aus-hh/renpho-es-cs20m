@@ -5,8 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
+	"google.golang.org/api/idtoken"
 	"log"
 	"net/http"
 	"os"
@@ -29,28 +28,18 @@ const targetMACAddress = "ED:67:39:0A:C5:C0"
 var stabilizationDuration = 3 * time.Second
 
 func NewWeightReceiver() (*WeightReceiver, error) {
-	keyFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
-	if keyFile == "" {
-		return nil, fmt.Errorf("GOOGLE_APPLICATION_CREDENTIALS not set")
-	}
-
-	creds, err := os.ReadFile(keyFile)
-	if err != nil {
-		return nil, err
-	}
-
-	config, err := google.JWTConfigFromJSON(creds, "https://www.googleapis.com/auth/cloud-platform")
-	if err != nil {
-		return nil, err
-	}
-
 	url := os.Getenv("WEIGHTUPDATER_URL")
 	if url == "" {
 		return nil, fmt.Errorf("WEIGHTUPDATER_URL not set")
 	}
 
+	client, err := idtoken.NewClient(context.Background(), url)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't initialise the client: %w", err)
+	}
+
 	return &WeightReceiver{
-		httpClient:       oauth2.NewClient(context.Background(), config.TokenSource(context.Background())),
+		httpClient:       client,
 		weightUpdaterUrl: url,
 		btAdapter:        bluetooth.DefaultAdapter,
 	}, nil
@@ -113,6 +102,17 @@ func (wr *WeightReceiver) interruptOnOsSignals(osSignals <-chan os.Signal) {
 type RequestBody struct {
 	Date   time.Time `json:"date"`
 	Weight float32   `json:"weight"`
+}
+
+func (r RequestBody) MarshalJSON() ([]byte, error) {
+	type Alias RequestBody
+	return json.Marshal(&struct {
+		Date string `json:"date"`
+		*Alias
+	}{
+		Date:  r.Date.Format("2006-01-02"),
+		Alias: (*Alias)(&r),
+	})
 }
 
 func (wr *WeightReceiver) sendWeight(detectedWeight float32) {
