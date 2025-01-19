@@ -12,7 +12,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  go-check-build:
+  Compile and Test go code:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -48,8 +48,9 @@ jobs:
           else
             echo "All tests passed successfully."
           fi
-  build-and-push-image:
+  Build and Push Image:
     runs-on: ubuntu-latest
+    needs: Compile and Test go code
     permissions:
       contents: read
       packages: write
