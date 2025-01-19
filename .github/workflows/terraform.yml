@@ -3,7 +3,10 @@ name: 'Deploy the weight updater GCP function'
 on:
   push:
     branches: [ "master" ]
-  pull_request:
+    paths:
+      - 'weightupdater/**'
+      - '*.tf'
+      - '.github/workflows/terraform.yml'
 
 permissions:
   contents: read
