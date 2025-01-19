@@ -66,7 +66,7 @@ func (g *GoogleSheetService) findWriteRangeForDate(spreadsheet *sheets.Spreadshe
 		}
 
 		if datesAreEqual(dateParsed, date) {
-			return candidateSheet.Properties.Title + "!" + weightColumn + strconv.Itoa(i+1), nil
+			return "'" + candidateSheet.Properties.Title + "'" + "!" + weightColumn + strconv.Itoa(i+1), nil
 		}
 	}
 	return "", errors.New("Couldn't find date " + date.String())
