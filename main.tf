@@ -22,24 +22,6 @@ provider "google" {
   region  = "europe-west8"
 }
 
-resource "google_storage_bucket" "terraform_state" {
-  name                        = "${var.project_id}-terraform-state"
-  location                    = "europe-west8"
-  storage_class               = "STANDARD"
-  uniform_bucket_level_access = true
-  versioning {
-    enabled = true
-  }
-  lifecycle_rule {
-    action {
-      type = "Delete"
-    }
-    condition {
-      age = 90
-    }
-  }
-}
-
 resource "google_service_account" "google_sheets_account" {
   account_id   = "access-google-sheets"
   display_name = "Access to the Google Sheets"
