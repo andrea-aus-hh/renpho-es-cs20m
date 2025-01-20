@@ -1,4 +1,4 @@
-module weightreceiver
+module weightscanner
 
 go 1.23.4
 

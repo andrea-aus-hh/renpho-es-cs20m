@@ -7,10 +7,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o weightreceiver .
+    GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o weightscanner .
 
 FROM alpine:latest
 WORKDIR /
-COPY --from=builder /build/weightreceiver .
-RUN chmod +x ./weightreceiver
-CMD ["./weightreceiver"]
+COPY --from=builder /build/weightscanner .
+RUN chmod +x ./weightscanner
+CMD ["./weightscanner"]

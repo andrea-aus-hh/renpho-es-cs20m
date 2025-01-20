@@ -17,7 +17,7 @@ import (
 	"tinygo.org/x/bluetooth"
 )
 
-type WeightReceiver struct {
+type WeightScanner struct {
 	httpClient       *http.Client
 	weightUpdaterUrl string
 	btAdapter        *bluetooth.Adapter
@@ -27,7 +27,7 @@ const targetMACAddress = "ED:67:39:0A:C5:C0"
 
 var stabilizationDuration = 3 * time.Second
 
-func NewWeightReceiver() (*WeightReceiver, error) {
+func NewWeightScanner() (*WeightScanner, error) {
 	url := os.Getenv("WEIGHTUPDATER_URL")
 	if url == "" {
 		return nil, fmt.Errorf("WEIGHTUPDATER_URL not set")
@@ -38,7 +38,7 @@ func NewWeightReceiver() (*WeightReceiver, error) {
 		return nil, fmt.Errorf("couldn't initialise the client: %w", err)
 	}
 
-	return &WeightReceiver{
+	return &WeightScanner{
 		httpClient:       client,
 		weightUpdaterUrl: url,
 		btAdapter:        bluetooth.DefaultAdapter,
@@ -75,14 +75,14 @@ func processWeights(incomingWeights <-chan float32, finalWeightDetected chan<- f
 	close(finalWeightDetected)
 }
 
-func (wr *WeightReceiver) scanWeights(incomingWeights chan<- float32) {
-	if wr.btAdapter.Enable() != nil {
+func (ws *WeightScanner) scanWeights(incomingWeights chan<- float32) {
+	if ws.btAdapter.Enable() != nil {
 		fmt.Println("Failed to enable Bluetooth btAdapter")
 		close(incomingWeights)
 		return
 	}
 	log.Println("Scanning...")
-	wr.btAdapter.Scan(func(adapter *bluetooth.Adapter, result bluetooth.ScanResult) {
+	ws.btAdapter.Scan(func(adapter *bluetooth.Adapter, result bluetooth.ScanResult) {
 		address := strings.ToUpper(result.Address.String())
 		if address == targetMACAddress {
 			incomingWeights <- parseWeightData(result.ManufacturerData()[0].Data)
@@ -92,9 +92,9 @@ func (wr *WeightReceiver) scanWeights(incomingWeights chan<- float32) {
 	log.Println("Scan stopped!")
 }
 
-func (wr *WeightReceiver) interruptOnOsSignals(osSignals <-chan os.Signal) {
+func (ws *WeightScanner) interruptOnOsSignals(osSignals <-chan os.Signal) {
 	<-osSignals
-	wr.btAdapter.StopScan()
+	ws.btAdapter.StopScan()
 	fmt.Println("Scan interrupted, exiting...")
 	os.Exit(0)
 }
@@ -115,18 +115,18 @@ func (r RequestBody) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (wr *WeightReceiver) sendWeight(detectedWeight float32) {
-	log.Printf("Sending weight %.2f to %s", detectedWeight, wr.weightUpdaterUrl)
+func (ws *WeightScanner) sendWeight(detectedWeight float32) {
+	log.Printf("Sending weight %.2f to %s", detectedWeight, ws.weightUpdaterUrl)
 	body := RequestBody{Weight: detectedWeight, Date: time.Now()}
 	jsonData, err := json.Marshal(body)
 	log.Printf("JSON: %s", string(jsonData))
 
-	req, err := http.NewRequest("POST", wr.weightUpdaterUrl, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", ws.weightUpdaterUrl, bytes.NewBuffer(jsonData))
 	if err != nil {
 		panic(err)
 	}
 
-	resp, err := wr.httpClient.Do(req)
+	resp, err := ws.httpClient.Do(req)
 	if err != nil {
 		panic(err)
 	}
@@ -141,7 +141,7 @@ func main() {
 	incomingWeights := make(chan float32, 1)
 	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
 
-	wr, err := NewWeightReceiver()
+	wr, err := NewWeightScanner()
 	if err != nil {
 		log.Fatal(err)
 	}
