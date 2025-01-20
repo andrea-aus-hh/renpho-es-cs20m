@@ -74,7 +74,7 @@ func processWeights(incomingWeights <-chan float32, finalWeightDetected chan<- f
 
 func (ws *WeightScanner) scanWeights(incomingWeights chan<- float32) {
 	if ws.btAdapter.Enable() != nil {
-		fmt.Println("Failed to enable Bluetooth btAdapter")
+		fmt.Println("Failed to enable Bluetooth Adapter")
 		close(incomingWeights)
 		return
 	}
