@@ -25,7 +25,7 @@ type WeightScanner struct {
 
 const targetMACAddress = "ED:67:39:0A:C5:C0"
 
-var stabilizationDuration = 3 * time.Second
+const stabilizationDuration = 2 * time.Second
 
 func NewWeightScanner() (*WeightScanner, error) {
 	url := os.Getenv("WEIGHTUPDATER_URL")
@@ -56,19 +56,16 @@ func parseWeightData(rawData []byte) float32 {
 func processWeights(incomingWeights <-chan float32, finalWeightDetected chan<- float32) {
 	var currentWeight float32 = -1
 	var lastStableTime time.Time
-	isStable := false
 	for rawWeight := range incomingWeights {
 		log.Printf("Received weight %.2f", rawWeight)
 		if currentWeight != -1 && rawWeight == currentWeight {
-			log.Printf("Weight has been stabled on %.2f for %.0f seconds", rawWeight, time.Since(lastStableTime).Seconds())
-			if time.Since(lastStableTime) >= stabilizationDuration && !isStable {
-				isStable = true
+			log.Printf("Weight has been stable on %.2f for %.0f seconds", rawWeight, time.Since(lastStableTime).Seconds())
+			if time.Since(lastStableTime) >= stabilizationDuration {
 				finalWeightDetected <- rawWeight
 			}
 		} else {
 			currentWeight = rawWeight
 			lastStableTime = time.Now()
-			isStable = false
 		}
 	}
 	log.Println("Channel closed.")
