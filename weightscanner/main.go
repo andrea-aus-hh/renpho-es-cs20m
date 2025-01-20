@@ -24,8 +24,8 @@ type WeightScanner struct {
 }
 
 const targetMACAddress = "ED:67:39:0A:C5:C0"
-
 const stabilizationDuration = 2 * time.Second
+const dryWindowDuration = 10 * time.Second
 
 func NewWeightScanner() (*WeightScanner, error) {
 	url := os.Getenv("WEIGHTUPDATER_URL")
@@ -54,21 +54,31 @@ func parseWeightData(rawData []byte) float32 {
 }
 
 func processWeights(incomingWeights <-chan float32, finalWeightDetected chan<- float32) {
-	var currentWeight float32 = -1
+	var currentStableWeight float32 = -1
 	var lastStableTime time.Time
-	for rawWeight := range incomingWeights {
-		log.Printf("Received weight %.2f", rawWeight)
-		if currentWeight != -1 && rawWeight == currentWeight {
-			log.Printf("Weight has been stable on %.2f for %.0f seconds", rawWeight, time.Since(lastStableTime).Seconds())
+	var dryWindowStart time.Time
+	for scannedWeight := range incomingWeights {
+		if time.Since(dryWindowStart) < dryWindowDuration {
+			log.Printf("Skipping weight %.2f because of dry-window", scannedWeight)
+			continue
+		}
+		log.Printf("Scanned weight %.2f", scannedWeight)
+		if currentStableWeight != -1 && scannedWeight == currentStableWeight {
+			log.Printf("Weight has been stable on %.2f Kg for %.0f seconds", scannedWeight, time.Since(lastStableTime).Seconds())
 			if time.Since(lastStableTime) >= stabilizationDuration {
-				finalWeightDetected <- rawWeight
+				log.Printf("Found a stable weight: %.2f Kg. will pass it ", scannedWeight)
+				finalWeightDetected <- scannedWeight
+				lastStableTime = time.Now()
+				currentStableWeight = -1
+				dryWindowStart = time.Now()
 			}
 		} else {
-			currentWeight = rawWeight
+			currentStableWeight = scannedWeight
 			lastStableTime = time.Now()
 		}
+		log.Printf("Done with processing weight %.2f", scannedWeight)
 	}
-	log.Println("Channel closed.")
+	log.Println("Scanner channel closed, will stop processing.")
 	close(finalWeightDetected)
 }
 
@@ -134,8 +144,8 @@ func (ws *WeightScanner) sendWeight(detectedWeight float32) {
 
 func main() {
 	osSignals := make(chan os.Signal, 1)
-	finalWeightDetected := make(chan float32, 1)
-	incomingWeights := make(chan float32, 1)
+	finalWeightDetected := make(chan float32, 5)
+	incomingWeights := make(chan float32, 5)
 	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
 
 	wr, err := NewWeightScanner()
@@ -150,7 +160,6 @@ func main() {
 	select {
 	case finalWeight, ok := <-finalWeightDetected:
 		wr.sendWeight(finalWeight)
-		wr.btAdapter.StopScan()
 		if ok {
 			fmt.Printf("Stable weight detected: %.2fKg\n", finalWeight)
 		} else {

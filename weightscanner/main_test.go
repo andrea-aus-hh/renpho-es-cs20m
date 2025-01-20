@@ -15,8 +15,8 @@ func TestProducerConsumer(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			weightProvider()
 		}()
+		go weightProvider()
 		wg.Wait()
 		t.Logf("Shared resource value: %d", sharedResource)
 		result, ok := <-finalWeightDetected
@@ -71,11 +71,46 @@ func TestProducerConsumer(t *testing.T) {
 		incomingWeights := make(chan float32, 1)
 		finalWeightDetected := make(chan float32, 1)
 		runTest(t, incomingWeights, finalWeightDetected, func() {
-			for _, data := range []float32{10., 20., 30., 40., 50., 50., 50.} {
+			for _, data := range []float32{10., 20., 80., 80., 80.} {
 				incomingWeights <- data
 				time.Sleep(2 * time.Second)
 			}
 			close(incomingWeights)
-		}, true, 50.)
+		}, true, 80.)
+	})
+
+	t.Run(`When passing a different weight every two seconds,
+						and then the same weight every two seconds for four times
+						and then another weight every two seconds for three times
+					then the first of the two weights is returned`, func(t *testing.T) {
+
+		incomingWeights := make(chan float32, 5)
+		finalWeightDetected := make(chan float32, 5)
+		go processWeights(incomingWeights, finalWeightDetected)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+		}()
+		go func() {
+			for _, data := range []float32{10., 20., 30., 30., 30., 50., 50., 50., 50.} {
+				incomingWeights <- data
+				time.Sleep(2 * time.Second)
+			}
+			close(incomingWeights)
+		}()
+		wg.Wait()
+		t.Logf("Shared resource value: %d", sharedResource)
+
+		// Then
+		result, _ := <-finalWeightDetected
+		if result != 30. {
+			t.Errorf("Wrong result: %.2f, expected 30.", result)
+		}
+
+		_, ok := <-finalWeightDetected
+		if ok {
+			t.Errorf("This channel was expected to be closed, without having delivered further values.")
+		}
+
 	})
 }
