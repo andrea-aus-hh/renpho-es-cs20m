@@ -18,6 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
 
+    concurrency:
+      group: terraform-deploy
+      cancel-in-progress: false
+
     defaults:
       run:
         shell: bash
