@@ -20,8 +20,7 @@ This is composed of two parts:
 ### Why not write in the Google Sheet directly from the Raspberry Pi?
 
 It was for me an exercise in Terraform, GCP and GCP Cloud Run Functions.
-Also, this way the Raspberry Pi is exclusively authorised to call a certain GCP Cloud Run function,
-and not to touch the Google Sheet directly.
+Also, this way the Raspberry Pi has fewer responsibilities, it only needs to call an API endpoint.
 
 ### How is the weight read from the scale?
 
