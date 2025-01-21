@@ -10,11 +10,3 @@ resource "google_cloudfunctions2_function_iam_member" "invoker" {
   role           = "roles/cloudfunctions.invoker"
   member         = "serviceAccount:${google_service_account.pi_invoker.email}"
 }
-
-resource "google_cloudfunctions2_function_iam_member" "run_invoker" {
-  project        = google_cloudfunctions2_function.weight_updater_function.project
-  location       = google_cloudfunctions2_function.weight_updater_function.location
-  cloud_function = google_cloudfunctions2_function.weight_updater_function.name
-  role           = "roles/run.invoker"
-  member         = "serviceAccount:${google_service_account.pi_invoker.email}"
-}
