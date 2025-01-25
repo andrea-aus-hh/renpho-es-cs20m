@@ -54,9 +54,11 @@ jobs:
           mkdir -p dist
           GOOS=linux GOARCH=arm GOARM=7 go build -o dist/weightscanner
       - name: Package Tarball
+        working-directory: weightscanner
         run: |
           tar -czvf weightscanner.tar.gz -C dist weightscanner
       - name: Upload Release Asset
+        working-directory: weightscanner
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
