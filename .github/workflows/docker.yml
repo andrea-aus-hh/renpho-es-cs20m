@@ -71,7 +71,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
           files: weightscanner/weightscanner.tar.gz
-          asset_name: weightscanner.tar.gz
-          asset_content_type: application/gzip
