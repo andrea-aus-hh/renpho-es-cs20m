@@ -7,13 +7,11 @@ on:
       - 'weightscanner/**'
       - '.github/workflows/docker.yml'
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/weightscanner
-
 jobs:
   Compile_and_Test_Go_code:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
