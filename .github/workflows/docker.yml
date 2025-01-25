@@ -58,12 +58,11 @@ jobs:
         run: |
           tar -czvf weightscanner.tar.gz -C dist weightscanner
       - name: Upload Release Asset
-        working-directory: weightscanner
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          files: weightscanner.tar.gz
+          files: weightscanner/weightscanner.tar.gz
           asset_name: weightscanner.tar.gz
           asset_content_type: application/gzip
