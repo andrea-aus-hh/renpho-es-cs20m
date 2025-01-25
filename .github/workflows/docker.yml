@@ -59,6 +59,7 @@ jobs:
           tar -czvf weightscanner.tar.gz -C dist weightscanner
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
