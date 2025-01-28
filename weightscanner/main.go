@@ -89,12 +89,16 @@ func (ws *WeightScanner) scanWeights(incomingWeights chan<- float32) {
 		return
 	}
 	log.Println("Scanning...")
-	ws.btAdapter.Scan(func(adapter *bluetooth.Adapter, result bluetooth.ScanResult) {
+	err := ws.btAdapter.Scan(func(adapter *bluetooth.Adapter, result bluetooth.ScanResult) {
 		address := strings.ToUpper(result.Address.String())
 		if address == targetMACAddress {
 			incomingWeights <- parseWeightData(result.ManufacturerData()[0].Data)
 		}
 	})
+	if err != nil {
+		close(incomingWeights)
+		log.Fatal(err)
+	}
 	close(incomingWeights)
 	log.Println("Scan stopped!")
 }
