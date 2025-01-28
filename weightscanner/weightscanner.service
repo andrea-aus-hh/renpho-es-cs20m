@@ -1,0 +1,12 @@
+[Unit]
+Description=Fetch and Run the Latest Version of the Weight Scanner
+After=network.target
+
+[Service]
+ExecStart=/home/andrea/weightscanner/download_and_run.bash
+Restart=always
+User=andrea
+EnvironmentFile=/home/andrea/weightscanner/.env
+
+[Install]
+WantedBy=multi-user.target
