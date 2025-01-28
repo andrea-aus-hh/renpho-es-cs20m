@@ -59,7 +59,7 @@ jobs:
         working-directory: weightscanner
         run: |
           mkdir -p dist
-          GOOS=linux GOARCH=arm GOARM=7 go build -o dist/weightscanner
+          GOOS=linux GOARCH=arm GOARM=6 go build -o dist/weightscanner
       - name: Package Tarball
         working-directory: weightscanner
         run: |
