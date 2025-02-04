@@ -1,21 +1,19 @@
-# Renpho ES CS20M
+# 
 
 ## What and Why?
 
-Every day, when I wake up, I weight myself, I go back to the bedroom and write the weight in a Google Sheet.
-What often happens is that, in the short way between the scale and the bedroom,
-I forget to jot down the value.
+Every day, when I wake up, I weight myself on my Renpho ES CS20M scale, I go back to the bedroom and note the weight in a Google Sheet.
+What often happens is that I'll forget it in the few steps between the scale and the bedroom.
 
-Thanks to the system you'll find in this repository,
-I just need to weight myself, and the Google Sheet automatically gets updated.
+Thanks to this system, I just need to weight myself, and the Google Sheet automatically gets updated.
 
 ## How?
 
 This is composed of two parts:
-- The **Weight Updater** is responsible for writing the incoming weight to the Google Sheet
-  - It is deployed as a GCP Cloud Run Function, that takes a weight/date combination as an input, and writes it in the appropriate place in the Google Sheet
-  - Why a Google Sheet? Because it's shared with my personal trainer.
-- The **Weight Scanner** listens for BLE messages, filters the ones from my scale, parses the weight, and sends it to the Weight Updater
+- The **Weight Updater** is responsible for writing the incoming weight to the Google Sheet.
+  - It is deployed as a GCP Cloud Run Function which takes a weight/date as an input, and writes it in the appropriate place in the Google Sheet.
+  - Why a Google Sheet? I work with a personal trainer, and our main way of keeping track of data is Google Sheets.
+- The **Weight Scanner** listens for BLE messages coming from my scale, parses the weight data, and sends it to the Weight Updater.
   - This runs as a service on a Raspberry Pi 1, conveniently located to receive messages from my scale.
 
 ### Why not write in the Google Sheet directly from the Raspberry Pi?
@@ -36,10 +34,12 @@ AABB ED67 390A C5C0 352F 4167 FFFF FF02 3000 004B 0903 B412  (Back to zero weigh
 ```
 
 Such messages can be divided in the following parts:
--  `AABB ED67 390A C5C0 352F 4167 FFFF FF02 30` is fixed
+-  `AABB ED67 390A C5C0 352F 4167 FFFF FF02 30` never changes
 - The next four characters (2 bytes) are the measured weight, in little-endian order
-- The rest still appears to be body-related data, which I didn't bother decoding
+- `4B` is fixed, and represents the letter `K` in ASCII, likely referring to Kilograms
+- The rest appears to be further measurements, which I didn't bother decoding
   - Consider that the scale also measures BMI and other values, so it might be that data
 
-I found the MAC Address of the scale by trying to isolate myself as much as possible from other BLE devices,
-and finding one that was sending messages only when stepping on the scale.
+The filtering of messages is based on the MAC Address of the scale, which I found
+by trying to isolate myself as much as possible from other BLE devices,
+and finding the one that was sending messages only when stepping on the scale.
