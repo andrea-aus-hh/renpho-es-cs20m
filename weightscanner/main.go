@@ -161,14 +161,9 @@ func main() {
 	go wr.scanWeights(incomingWeights)
 	go processWeights(incomingWeights, finalWeightDetected)
 
-	select {
-	case finalWeight, ok := <-finalWeightDetected:
+	for finalWeight := range finalWeightDetected {
 		wr.sendWeight(finalWeight)
-		if ok {
-			fmt.Printf("Stable weight detected: %.2fKg\n", finalWeight)
-		} else {
-			fmt.Printf("Stable weight not detected")
-		}
-		os.Exit(0)
+		fmt.Printf("Stable weight detected: %.2fKg\n", finalWeight)
 	}
+	fmt.Println("Channel closed, stopping weight detection.")
 }
