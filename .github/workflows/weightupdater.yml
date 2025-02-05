@@ -6,7 +6,7 @@ on:
     paths:
       - 'weightupdater/**'
       - '*.tf'
-      - '.github/workflows/terraform.yml'
+      - '.github/workflows/weightupdater.yml'
 
 permissions:
   contents: read

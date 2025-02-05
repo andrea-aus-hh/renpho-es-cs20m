@@ -5,7 +5,7 @@ on:
     branches: ['master']
     paths:
       - 'weightscanner/**'
-      - '.github/workflows/docker.yml'
+      - '.github/workflows/weightscanner.yml'
 
 jobs:
   Compile_and_Test_Go_code:
