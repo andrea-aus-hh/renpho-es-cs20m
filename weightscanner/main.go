@@ -152,17 +152,17 @@ func main() {
 	incomingWeights := make(chan float32, 5)
 	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
 
-	wr, err := NewWeightScanner()
+	ws, err := NewWeightScanner()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	go wr.interruptOnOsSignals(osSignals)
-	go wr.scanWeights(incomingWeights)
+	go ws.interruptOnOsSignals(osSignals)
+	go ws.scanWeights(incomingWeights)
 	go processWeights(incomingWeights, finalWeightDetected)
 
 	for finalWeight := range finalWeightDetected {
-		wr.sendWeight(finalWeight)
+		ws.sendWeight(finalWeight)
 		fmt.Printf("Stable weight detected: %.2fKg\n", finalWeight)
 	}
 	fmt.Println("Channel closed, stopping weight detection.")
