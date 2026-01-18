@@ -1,6 +1,7 @@
-package weightupdater
+package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"google.golang.org/api/sheets/v4"
@@ -10,12 +11,23 @@ import (
 	"time"
 )
 
-type WeightService interface {
+type IWeightUpdater interface {
 	Update(spreadsheetId string, date time.Time, weight float32) error
 }
 
-type GoogleSheetService struct {
+type GSWeightUpdater struct {
 	service *sheets.Service
+}
+
+func NewGSWeightUpdater() *GSWeightUpdater {
+	ctx := context.Background()
+	sheetsService, err := sheets.NewService(ctx)
+	if err != nil {
+		log.Fatalf("Unable to create Sheets client: %v", err)
+	}
+	return &GSWeightUpdater{
+		service: sheetsService,
+	}
 }
 
 const dateLayout = "02/01/2006"
@@ -24,8 +36,12 @@ const firstDatePosition = "B4"
 const datesRange = "B:B"
 const weightColumn = "E"
 
-func (g *GoogleSheetService) Update(spreadsheetId string, date time.Time, weight float32) error {
+func (g *GSWeightUpdater) Update(spreadsheetId string, date time.Time, weight float32) error {
 	spreadsheet, err := g.service.Spreadsheets.Get(spreadsheetId).Do()
+	if err != nil {
+		log.Printf("Couldn't connect to the spreadsheet: %v\n", err)
+		return err
+	}
 	writeRange, err := g.findWriteRangeForDate(spreadsheet, date)
 
 	valueRange := &sheets.ValueRange{
@@ -41,7 +57,11 @@ func (g *GoogleSheetService) Update(spreadsheetId string, date time.Time, weight
 	return nil
 }
 
-func (g *GoogleSheetService) findWriteRangeForDate(spreadsheet *sheets.Spreadsheet, date time.Time) (string, error) {
+func datesAreEqual(date1, date2 time.Time) bool {
+	return date1.Year() == date2.Year() && date1.Month() == date2.Month() && date1.Day() == date2.Day()
+}
+
+func (g *GSWeightUpdater) findWriteRangeForDate(spreadsheet *sheets.Spreadsheet, date time.Time) (string, error) {
 	candidateSheet := g.findCorrectSheet(spreadsheet, date)
 
 	log.Printf("Candidate sheet is called '%s'", candidateSheet.Properties.Title)
@@ -72,7 +92,7 @@ func (g *GoogleSheetService) findWriteRangeForDate(spreadsheet *sheets.Spreadshe
 	return "", errors.New("Couldn't find date " + date.String())
 }
 
-func (g *GoogleSheetService) findCorrectSheet(spreadsheet *sheets.Spreadsheet, dateToFind time.Time) *sheets.Sheet {
+func (g *GSWeightUpdater) findCorrectSheet(spreadsheet *sheets.Spreadsheet, dateToFind time.Time) *sheets.Sheet {
 	candidateSheet := spreadsheet.Sheets[0]
 	for _, sheet := range spreadsheet.Sheets {
 		if !strings.HasPrefix(sheet.Properties.Title, weightDiaryPrefix) {
@@ -81,11 +101,11 @@ func (g *GoogleSheetService) findCorrectSheet(spreadsheet *sheets.Spreadsheet, d
 		readRange := fmt.Sprintf("%s!%s", candidateSheet.Properties.Title, firstDatePosition)
 		resp, err := g.service.Spreadsheets.Values.Get(spreadsheet.SpreadsheetId, readRange).Do()
 		if err != nil {
-			log.Fatalf("Unable to retrieve data from sheet: %v", err)
+			log.Printf("Unable to retrieve data from sheet: %v", err)
 		}
 		firstDate, err := time.Parse(dateLayout, resp.Values[0][0].(string))
 		if err != nil {
-			log.Fatalf("Unable to parse data from sheet: %v", err)
+			log.Printf("Unable to parse data from sheet: %v", err)
 		}
 		if firstDate.After(dateToFind) {
 			break

@@ -1,13 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"fmt"
-	"google.golang.org/api/idtoken"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -18,30 +13,19 @@ import (
 )
 
 type WeightScanner struct {
-	httpClient       *http.Client
-	weightUpdaterUrl string
-	btAdapter        *bluetooth.Adapter
+	btAdapter     *bluetooth.Adapter
+	weightUpdater IWeightUpdater
 }
 
+const spreadsheetId = "1WBAPDBnb01eJFBpBwmo_NDq2r9B44U0wyt7CZFxtus4"
 const targetMACAddress = "ED:67:39:0A:C5:C0"
 const stabilizationDuration = 2 * time.Second
 const dryWindowDuration = 10 * time.Second
 
 func NewWeightScanner() (*WeightScanner, error) {
-	url := os.Getenv("WEIGHTUPDATER_URL")
-	if url == "" {
-		return nil, fmt.Errorf("WEIGHTUPDATER_URL not set")
-	}
-
-	client, err := idtoken.NewClient(context.Background(), url)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't initialise the client: %w", err)
-	}
-
 	return &WeightScanner{
-		httpClient:       client,
-		weightUpdaterUrl: url,
-		btAdapter:        bluetooth.DefaultAdapter,
+		btAdapter:     bluetooth.DefaultAdapter,
+		weightUpdater: NewGSWeightUpdater(),
 	}, nil
 }
 
@@ -66,7 +50,7 @@ func processWeights(incomingWeights <-chan float32, finalWeightDetected chan<- f
 		if currentStableWeight != -1 && scannedWeight == currentStableWeight {
 			log.Printf("Weight has been stable on %.2f Kg for %.0f seconds", scannedWeight, time.Since(lastStableTime).Seconds())
 			if time.Since(lastStableTime) >= stabilizationDuration {
-				log.Printf("Found a stable weight: %.2f Kg. will pass it ", scannedWeight)
+				log.Printf("Found a stable weight: %.2f Kg, sending it for storage ", scannedWeight)
 				finalWeightDetected <- scannedWeight
 				lastStableTime = time.Now()
 				currentStableWeight = -1
@@ -76,7 +60,7 @@ func processWeights(incomingWeights <-chan float32, finalWeightDetected chan<- f
 			currentStableWeight = scannedWeight
 			lastStableTime = time.Now()
 		}
-		log.Printf("Done with processing weight %.2f", scannedWeight)
+		log.Printf("Done with processing weight %.2f\n", scannedWeight)
 	}
 	log.Println("Scanner channel closed, will stop processing.")
 	close(finalWeightDetected)
@@ -110,42 +94,6 @@ func (ws *WeightScanner) interruptOnOsSignals(osSignals <-chan os.Signal) {
 	os.Exit(0)
 }
 
-type RequestBody struct {
-	Date   time.Time `json:"date"`
-	Weight float32   `json:"weight"`
-}
-
-func (r RequestBody) MarshalJSON() ([]byte, error) {
-	type Alias RequestBody
-	return json.Marshal(&struct {
-		Date string `json:"date"`
-		*Alias
-	}{
-		Date:  r.Date.Format("2006-01-02"),
-		Alias: (*Alias)(&r),
-	})
-}
-
-func (ws *WeightScanner) sendWeight(detectedWeight float32) {
-	log.Printf("Sending weight %.2f to %s", detectedWeight, ws.weightUpdaterUrl)
-	body := RequestBody{Weight: detectedWeight, Date: time.Now()}
-	jsonData, err := json.Marshal(body)
-	log.Printf("JSON: %s", string(jsonData))
-
-	req, err := http.NewRequest("POST", ws.weightUpdaterUrl, bytes.NewBuffer(jsonData))
-	if err != nil {
-		panic(err)
-	}
-
-	resp, err := ws.httpClient.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	fmt.Printf("Response: %s\n", resp.Status)
-}
-
 func main() {
 	osSignals := make(chan os.Signal, 1)
 	finalWeightDetected := make(chan float32, 5)
@@ -162,7 +110,7 @@ func main() {
 	go processWeights(incomingWeights, finalWeightDetected)
 
 	for finalWeight := range finalWeightDetected {
-		ws.sendWeight(finalWeight)
+		ws.weightUpdater.Update(spreadsheetId, time.Now(), finalWeight)
 		fmt.Printf("Stable weight detected: %.2fKg\n", finalWeight)
 	}
 	fmt.Println("Channel closed, stopping weight detection.")
