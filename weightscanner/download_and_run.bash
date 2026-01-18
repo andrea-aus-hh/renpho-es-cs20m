@@ -19,6 +19,8 @@ ASSET_URL=$(curl -s https://api.github.com/repos/$REPO/releases/latest \
   | grep "browser_download_url.*$TARBALL" \
   | cut -d '"' -f 4)
 
+echo "Asset URL $ASSET_URL"
+
 if [ -z "$ASSET_URL" ]; then
   echo "Error: Latest release tarball not found!"
   exit 1
